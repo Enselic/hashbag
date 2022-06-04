@@ -718,7 +718,7 @@ where
     /// ```
     pub fn difference<'a>(&'a self, other: &'a HashBag<T, S>) -> Difference<'a, T, S> {
         Difference {
-            iter: self.iter(),
+            base_iter: self.iter(),
             other,
         }
     }
@@ -1131,12 +1131,12 @@ impl<'a, T> Iterator for Drain<'a, T> {
     }
 }
 
-/// TODO
+/// This `struct` is created by [`HashBag::difference`].
+/// See its documentation for more.
 pub struct Difference<'a, T, S> {
-    // iterator of the first set
-    iter: Iter<'a, T>,
-    // the second hashbag
+    base_iter: Iter<'a, T>,
     other: &'a HashBag<T, S>,
+    hits_for_other: &'a HashMap<&'a T, usize, S>,
 }
 
 impl<'a, T: fmt::Debug, S> fmt::Debug for Difference<'a, T, S> {
@@ -1155,8 +1155,10 @@ where
     #[inline]
     fn next(&mut self) -> Option<&'a T> {
         loop {
-            let elt = self.iter.next()?;
-            if self.other.contains(elt) == 0 {
+            let elt = self.base_iter.next()?;
+            let hits = self.hits_for_other.entry(elt).or_insert(0);
+            *hits += 1;
+            if self.other.contains(elt) > *hits {
                 return Some(elt);
             }
         }
@@ -1164,7 +1166,7 @@ where
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let (_, upper) = self.iter.size_hint();
+        let (_, upper) = self.base_iter.size_hint();
         (0, upper)
     }
 }
@@ -1222,7 +1224,7 @@ mod tests {
         let expected = expected_entries.iter().collect::<HashBag<_>>();
         assert_eq!(
             this.difference(&other)
-                .map(|x| *x)
+                .copied()
                 .collect::<HashBag<&isize>>(),
             expected
         );
