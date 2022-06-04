@@ -702,6 +702,27 @@ where
         }
     }
 
+    /// TODO
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashbag::HashBag;
+    ///
+    /// let mut a: HashBag<_> = [1, 2, 3, 3].iter().cloned().collect();
+    /// let mut b: HashBag<_> = [3, 3, 3].iter().cloned().collect();
+    /// let mut c: HashBag<_> = [4].iter().cloned().collect();
+    /// assert_eq!(a.difference(&b).cloned().collect().contains(&1), 1);
+    /// assert_eq!(a.difference(&b).cloned().collect().contains(&2), 1);
+    /// assert_eq!(a.difference(&b).cloned().collect().contains(&3), 0);
+    /// ```
+    pub fn difference<'a>(&'a self, other: &'a HashBag<T, S>) -> Difference<'a, T, S> {
+        Difference {
+            iter: self.iter(),
+            other,
+        }
+    }
+
     /// Removes a value that is equal to the given one, and returns it if it was the last.
     ///
     /// If the matching value is not the last, a reference to the remainder is given, along with
@@ -1109,6 +1130,45 @@ impl<'a, T> Iterator for Drain<'a, T> {
         self.0.size_hint()
     }
 }
+
+/// TODO
+pub struct Difference<'a, T: 'a, S: 'a> {
+    // iterator of the first set
+    iter: Iter<'a, T>,
+    // the second hashbag
+    other: &'a HashBag<T, S>,
+}
+
+impl<'a, T: fmt::Debug, S> fmt::Debug for Difference<'a, T, S> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.write_str("data")
+    }
+}
+
+impl<'a, T, S> Iterator for Difference<'a, T, S>
+where
+    T: Eq + Hash,
+    S: BuildHasher,
+{
+    type Item = &'a T;
+
+    #[inline]
+    fn next(&mut self) -> Option<&'a T> {
+        loop {
+            let elt = self.iter.next()?;
+            if self.other.contains(elt) > 0{
+                return Some(elt);
+            }
+        }
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let (_, upper) = self.iter.size_hint();
+        (0, upper)
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
