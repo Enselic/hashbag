@@ -712,9 +712,9 @@ where
     /// let mut a: HashBag<_> = [1, 2, 3, 3].iter().cloned().collect();
     /// let mut b: HashBag<_> = [3, 3, 3].iter().cloned().collect();
     /// let mut c: HashBag<_> = [4].iter().cloned().collect();
-    /// assert_eq!(a.difference(&b).cloned().collect().contains(&1), 1);
-    /// assert_eq!(a.difference(&b).cloned().collect().contains(&2), 1);
-    /// assert_eq!(a.difference(&b).cloned().collect().contains(&3), 0);
+    /// assert_eq!(a.difference(&b).iter().cloned::<HashBag<_>>().collect().contains(&1), 1);
+    /// assert_eq!(a.difference(&b).iter().cloned::<HashBag<_>>().collect().contains(&2), 1);
+    /// assert_eq!(a.difference(&b).iter().cloned::<HashBag<_>>().collect().contains(&3), 0);
     /// ```
     pub fn difference<'a>(&'a self, other: &'a HashBag<T, S>) -> Difference<'a, T, S> {
         Difference {
@@ -1132,7 +1132,7 @@ impl<'a, T> Iterator for Drain<'a, T> {
 }
 
 /// TODO
-pub struct Difference<'a, T: 'a, S: 'a> {
+pub struct Difference<'a, T, S> {
     // iterator of the first set
     iter: Iter<'a, T>,
     // the second hashbag
@@ -1156,7 +1156,7 @@ where
     fn next(&mut self) -> Option<&'a T> {
         loop {
             let elt = self.iter.next()?;
-            if self.other.contains(elt) > 0{
+            if self.other.contains(elt) == 0 {
                 return Some(elt);
             }
         }
@@ -1168,7 +1168,6 @@ where
         (0, upper)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -1201,5 +1200,31 @@ mod tests {
         let di = vikings.drain();
         assert_eq!(di.size_hint(), (2, Some(2)));
         assert_eq!(di.count(), 2);
+    }
+
+    #[test]
+    fn test_difference() {
+        do_test_difference(&[1, 2, 2, 3], &[3], &[1, 2, 2]);
+        do_test_difference(&[1, 2, 2, 3], &[4], &[1, 2, 2, 3]);
+        do_test_difference(&[2, 2, 2], &[2, 2], &[2]);
+        do_test_difference(&[2, 2, 2], &[], &[2, 2, 2]);
+        do_test_difference(&[], &[], &[]);
+        do_test_difference(&[1], &[2], &[1]);
+    }
+
+    fn do_test_difference(
+        self_entries: &[isize],
+        other_entries: &[isize],
+        expected_entries: &[isize],
+    ) {
+        let this = self_entries.iter().collect::<HashBag<_>>();
+        let other = other_entries.iter().collect::<HashBag<_>>();
+        let expected = expected_entries.iter().collect::<HashBag<_>>();
+        assert_eq!(
+            this.difference(&other)
+                .map(|x| *x)
+                .collect::<HashBag<&isize>>(),
+            expected
+        );
     }
 }
