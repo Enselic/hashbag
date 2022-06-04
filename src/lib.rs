@@ -1137,7 +1137,7 @@ impl<'a, T> Iterator for Drain<'a, T> {
 pub struct Difference<'a, T, S> {
     base_iter: Iter<'a, T>,
     other: &'a HashBag<T, S>,
-    hits_for_other: HashMap<&'a T, usize, S>,
+    hits_for_other: HashMap<&'a T, usize>,
 }
 
 impl<'a, T: fmt::Debug, S> fmt::Debug for Difference<'a, T, S> {
